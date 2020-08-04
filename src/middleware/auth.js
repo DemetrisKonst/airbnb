@@ -12,16 +12,16 @@ const auth = async (req, res, next) => {
     const id = jwt.verify(token, jwtSecret).id;
     
     const user = await User.findOne({_id: id});
-
-    // console.log(user);
     
+    if (!user) throw new Error();
 
     req.token = token;
     req.user = user;
 
     next();
   } catch (error) {
-    throw new ErrorMid(401, 'Incorrect authentication');
+    const msg = {success: false, message: 'Incorrect authentication'}
+    res.status(401).send(msg);
   }
 }
 

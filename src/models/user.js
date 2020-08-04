@@ -5,45 +5,74 @@ const bcrypt = require('bcryptjs');
 const ErrorMid = require('../middleware/error.js').ErrorMid;
 
 const userSchema = new mongoose.Schema({
-  name: {
+  userName: {
+    type: String,
+    required: true,
+    trim: true,
+    unique: true
+  },
+  firstName: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  lastName: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    trim: true,
+    lowercase: true,
+    validate(value) {
+        if (!validator.isEmail(value)) {
+            throw new ErrorMid(422, 'Email is invalid');
+        }
+    },
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 7,
+    trim: true,
+    validate(value) {
+        if (value.toLowerCase().includes('password')) {
+            throw new ErrorMid(422, 'Password cannot contain "password"')
+        }
+    }
+  },
+  role: {
+    type: String,
+    required: true,
+    enum: ['Admin', 'Host', 'Tenant', 'Both'],
+    trim: true
+  },
+  tel: {
     type: String,
     required: true,
     trim: true
   },
-  email: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-      validate(value) {
-          if (!validator.isEmail(value)) {
-              throw new ErrorMid(422, 'Email is invalid');
-          }
-      }
+  DoB: {
+    type: Date,
+    required: true,
   },
-  password: {
+  avatar: {
+    format: {
       type: String,
-      required: true,
-      minlength: 7,
-      trim: true,
-      validate(value) {
-          if (value.toLowerCase().includes('password')) {
-              throw new ErrorMid(422, 'Password cannot contain "password"')
-          }
-      }
+      enum: ['jpeg', 'png', 'gif'],
+    },
+    data: Buffer,
   },
-  age: {
-      type: Number,
-      default: 0,
-      validate(value) {
-          if (value < 0) {
-              throw new ErrorMid(422, 'Age must be a postive number')
-          }
-      }
+  approvedByAdmin: {
+    type: Boolean,
   }
+  
 });
 
-userSchema.statics.findByCredentials = async (email, password) => {
+userSchema.statics.findByCredentials = async function (email, password) {
   const user = await User.findOne({ email });
 
   if (!user) {
@@ -68,6 +97,33 @@ userSchema.pre('save', async function (next) {
 
   next();
 });
+
+const handleDup = function(error, res, next) {
+  if (error.name === 'MongoError' && error.code === 11000) {
+    next(new ErrorMid(400, Object.keys(error.keyValue) + ' already exists'));
+  } else {
+    next();
+  }
+};
+
+userSchema.post('save', handleDup);
+userSchema.post('update', handleDup);
+userSchema.post('findOneAndUpdate', handleDup);
+userSchema.post('insertMany', handleDup);
+
+userSchema.methods.view = async function () {
+  return {
+    _id: this._id,
+    userName: this.userName,
+    firstName: this.firstName,
+    lastName: this.lastName,
+    email: this.email,
+    tel: this.tel,
+    DoB: this.DoB,
+    role: this.role,
+    approvedByAdmin: this.approvedByAdmin ? this.approvedByAdmin : false
+  };
+}
 
 const User = mongoose.model('User', userSchema);
 
