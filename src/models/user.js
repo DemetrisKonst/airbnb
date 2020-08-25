@@ -47,7 +47,7 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     required: true,
-    enum: ['Admin', 'Host', 'Tenant', 'Both'],
+    enum: ['Host', 'Tenant', 'Both'],
     trim: true
   },
   tel: {
@@ -60,11 +60,7 @@ const userSchema = new mongoose.Schema({
     required: true,
   },
   avatar: {
-    format: {
-      type: String,
-      enum: ['jpeg', 'png', 'gif'],
-    },
-    data: Buffer,
+    type: Buffer,
   },
   approvedByAdmin: {
     type: Boolean,

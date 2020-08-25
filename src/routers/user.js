@@ -1,4 +1,6 @@
 const express = require('express');
+const multer = require('multer');
+const sharp = require('sharp');
 
 const {auth, generateToken} = require('../middleware/auth.js');
 const ErrorMid = require('../middleware/error.js').ErrorMid;
@@ -72,5 +74,59 @@ router.delete('/users/me', auth, async (req, res, next) => {
     next(error);
   }
 });
+
+const upload = multer({
+  limits: {
+      fileSize: 1000000
+  },
+  fileFilter(req, file, cb) {
+      if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+          return cb(new Error('Please upload an image'));
+      }
+
+      cb(undefined, true);
+  }
+});
+
+router.put('/users/me/avatar', auth, upload.single('avatar'), async (req, res, next) => {
+  try{
+    const buffer = await sharp(req.file.buffer).resize(250, 250).png().toBuffer();
+    req.user.avatar = buffer;
+    await req.user.save();
+
+    res.status(201).send();
+  }catch (error){
+    next(error);
+  }
+});
+
+router.get('/users/:id/avatar', async (req, res, next) => {
+  try{
+    const user = await User.findById(req.params.id)
+
+    if (!user) {
+      throw new ErrorMid(404, 'User does not exist');
+    }
+
+    if (!user.avatar) {
+      throw new ErrorMid(404, 'User does not have an avatar');
+    }
+
+    res.set('Content-Type', 'image/png')
+    res.send(user.avatar)
+  }catch (error){
+    next(error);
+  }
+});
+
+router.delete('/users/me/avatar', auth, async (req, res, next) => {
+  try{
+    req.user.avatar = undefined;
+    await req.user.save();
+    res.send();
+  }catch (error){
+    next(error);
+  }
+})
 
 module.exports = router;
