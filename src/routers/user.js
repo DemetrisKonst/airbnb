@@ -8,6 +8,14 @@ const User = require('../models/user.js');
 
 const router = express.Router();
 
+// router.get('/', async(req, res, next) => {
+//   try{
+//     res.sendFile('/home/dimitris/Documents/code/web/tedi/public/index.html');
+//   }catch (error){
+//     next(error);
+//   }
+// });
+
 router.post('/users', async (req, res, next) => {
   try{
     const user = new User(req.body);

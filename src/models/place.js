@@ -3,6 +3,8 @@ const validator = require('validator');
 
 const ErrorMid = require('../middleware/error.js').ErrorMid;
 
+const Booking = require('./booking.js');
+
 const placeSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -33,6 +35,11 @@ const placeSchema = new mongoose.Schema({
     required: true,
     min: 1
   },
+  maxPersons: {
+    type: Number,
+    required: true,
+    min: 1
+  },
   rooms: {
     bedrooms: {
       type: Number,
@@ -45,17 +52,10 @@ const placeSchema = new mongoose.Schema({
       min: 0,
     }
   },
-  reviews: {
-    amount: {
-      type: Number,
-      min: 0
-    },
-    average: {
-      type: Number,
-      min: 0
-    },
-    data: []
-  },
+  reviews: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Review"
+  }],
   amenities: {
     wifi: Boolean,
     airConditioning: Boolean,
@@ -93,29 +93,59 @@ const placeSchema = new mongoose.Schema({
   },
   photos: {
     main: {
-      type: Buffer
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Photo"
     },
-    secondary: []
-  }
+    secondary: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Photo"
+    }]
+  },
+  bookings: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Booking"
+  }]
 });
 
-placeSchema.methods.smallView = async function () {
-  return {
-    _id: this._id,
-    name: this.name,
-    description: this.description,
-    costPerDay: this.costPerDay,
-    type: this.type,
-    bedAmount: this.bedAmount,
-    rooms: this.rooms,
-    reviewAmount: this.reviews.amount,
-    reviewAverage: this.reviews.average,
-    wifi: this.amenities.wifi,
-    kitchen: this.amenities.kitchen,
-    neighbourhood: this.location.neighbourhood,
-    transport: this.location.transport
-  };
+placeSchema.methods.isBooked = async function (fromDate, untilDate) {
+  for (const booking_id of this.bookings) {
+    const booking = await Booking.findById(booking_id);
+
+    if (fromDate <= booking.from){
+      if (untilDate > booking.from){
+        return true;
+      }
+    }else if (fromDate < booking.until){
+      return true;
+    }
+  }
 }
+
+placeSchema.methods.isBookingValid = async function (persons, from, until) {
+  try{
+    if (persons < 1)
+      throw new ErrorMid(400, 'The amount of persons must be a positive number');
+
+    if (persons > this.maxPersons)
+      throw new ErrorMid(400, 'Place can take up to ' + this.maxPersons + ' persons');
+
+    const fromDate = new Date(from);
+    const untilDate = new Date(until);
+
+    if (fromDate < Date.now())
+      throw new ErrorMid(400, 'From date must not have passed');
+
+    if (fromDate > untilDate)
+      throw new ErrorMid(400, 'From date must be before until date');
+
+    if (await this.isBooked(fromDate, untilDate))
+      throw new ErrorMid(400, 'Conflict with other booking');
+  }catch(error){
+    throw error;
+  }
+}
+
+// placeSchema.methods.deleteReview = async function (reviewId)
 
 const Place = mongoose.model('Place', placeSchema);
 
