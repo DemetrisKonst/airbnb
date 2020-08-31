@@ -9,8 +9,6 @@ const hostRouter = require('./routers/host.js');
 const placeRouter = require('./routers/place.js');
 const reviewRouter = require('./routers/review.js');
 
-const port = process.env.PORT || 3000;
-
 app.use(express.json());
 
 app.use(userRouter);
@@ -23,4 +21,4 @@ app.use( (err, req, res, next) => {
   handleError(err, res);
 });
 
-app.listen(port, () => console.log('Server up on port ' + port));
+module.exports = app;

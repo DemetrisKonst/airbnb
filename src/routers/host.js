@@ -155,7 +155,7 @@ router.post('/host/me/place/:id/photo', auth, upload.single('secondary'), async 
     const photo = new Photo({binary: buffer});
     await photo.save();
     
-    place.photos.secondary.push(place.photos.main);
+    place.photos.secondary.push(photo._id);
     await place.save();
 
     res.status(201).send({success: true, data: {id: photo._id}});

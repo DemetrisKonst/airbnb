@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 
 const ErrorMid = require('../middleware/error.js').ErrorMid;
 
+const Photo = require('./photo.js');
+
 const userSchema = new mongoose.Schema({
   userName: {
     type: String,
@@ -60,7 +62,8 @@ const userSchema = new mongoose.Schema({
     required: true,
   },
   avatar: {
-    type: Buffer,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Photo"
   },
   approvedByAdmin: {
     type: Boolean,

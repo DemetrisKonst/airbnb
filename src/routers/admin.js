@@ -33,7 +33,8 @@ router.get('/admin/users', auth, async (req, res, next) => {
     if (req.query.sortBy) {
       const parts = req.query.sortBy.split(':')
 
-      if (!allowedFields.includes(parts[0])) throw new ErrorMid(422, 'Cannot sort by ' + parts[0]);
+      if (!allowedFields.includes(parts[0]))
+        throw new ErrorMid(422, 'Cannot sort by ' + parts[0]);
 
       sort[parts[0]] = parts[1] === 'desc' ? -1 : 1
 

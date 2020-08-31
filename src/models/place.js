@@ -4,6 +4,7 @@ const validator = require('validator');
 const ErrorMid = require('../middleware/error.js').ErrorMid;
 
 const Booking = require('./booking.js');
+const Review = require('./review.js');
 
 const placeSchema = new mongoose.Schema({
   name: {
@@ -52,10 +53,20 @@ const placeSchema = new mongoose.Schema({
       min: 0,
     }
   },
-  reviews: [{
+  reviews: {
+    amount: {
+      type: Number,
+      min: 0
+    },
+    average: {
+      type: Number,
+      min: 0
+    },
+    review_ids: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Review"
-  }],
+    }]
+  },
   amenities: {
     wifi: Boolean,
     airConditioning: Boolean,
@@ -143,6 +154,20 @@ placeSchema.methods.isBookingValid = async function (persons, from, until) {
   }catch(error){
     throw error;
   }
+}
+
+placeSchema.methods.calculateReviews = async function () {
+  let sum = 0;
+  let amount = 0;
+  
+  for (const review_id of this.reviews.review_ids){
+    const review = await Review.findById(review_id);
+    sum += review.rating;
+    amount++;
+  }
+
+  this.reviews.amount = amount;
+  this.reviews.average = amount === 0 ? 0 : sum / amount;
 }
 
 // placeSchema.methods.deleteReview = async function (reviewId)

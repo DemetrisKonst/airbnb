@@ -11,7 +11,11 @@ const router = express.Router();
 router.post('/place/:id/review', auth, async (req, res, next) => {
   try{
     const place = await Place.findById(req.params.id);
-    if (!place) throw new ErrorMid(404, 'Place does not exist');
+    if (!place)
+      throw new ErrorMid(404, 'Place does not exist');
+
+    if (place.owner === req.user._id)
+      throw new ErrorMid(400, 'You cannot review your own place');
 
     req.body.user = req.user._id;
     req.body.place = req.params.id;
@@ -19,7 +23,9 @@ router.post('/place/:id/review', auth, async (req, res, next) => {
     const review = new Review(req.body);
     await review.save();
 
-    place.reviews.push(review);
+    place.reviews.review_ids.push(review);
+    await place.calculateReviews();
+    place.markModified('reviews');
     await place.save();
 
     res.status(201).send({success: true, data: review});
@@ -37,9 +43,19 @@ router.patch('/review/:id', auth, async (req, res, next) => {
       if (!allowedUpdates.includes(update)) throw new ErrorMid(422, 'Cannot update field ' + update);
     }
 
-    await Review.findOneAndUpdate({_id: req.params.id, user: req.user._id}, req.body);
+    const review = await Review.findOneAndUpdate({_id: req.params.id, user: req.user._id}, req.body);
+    
+    if (!review)
+      throw new ErrorMid(404, 'Review does not exist');
 
-    res.status(200).send({success: true})
+    const place = await Place.findById(review.place);
+    await place.calculateReviews();
+    console.log(place.reviews);
+    place.markModified('reviews');
+    console.log(place.reviews);
+    await place.save();
+
+    res.status(200).send({success: true, data: req.body});
   }catch (error){
     next(error);
   }
@@ -48,9 +64,14 @@ router.patch('/review/:id', auth, async (req, res, next) => {
 router.delete('/review/:id', auth, async (req, res, next) => {
   try{
     const review = await Review.findOneAndDelete({_id: req.params.id, user: req.user._id});
+
+    if (!review)
+      throw new ErrorMid(404, 'Review does not exist');
     
     const place = await Place.findById(review.place);
-    place.reviews.pull(review._id);
+    place.reviews.review_ids.pull(review._id);
+    await place.calculateReviews();
+    place.markModified('reviews');
     await place.save();
 
     res.status(200).send({success: true})
