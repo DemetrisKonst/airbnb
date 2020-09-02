@@ -1,10 +1,13 @@
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
 
 const ErrorMid = require('./error').ErrorMid;
 const User = require('../models/user.js');
 
 const jwtSecret = process.env.JWT_SECRET;
+
+// The following function is a middleware, in endpoints that require authentication,
+// it is used by placing it before the actual function of the endpoint in the expressjs
+// arguments. At first it verifies the jwt and then looks up the user in the db
 
 const auth = async (req, res, next) => {
   try {
@@ -20,8 +23,7 @@ const auth = async (req, res, next) => {
 
     next();
   } catch (error) {
-    const msg = {success: false, message: 'Incorrect authentication'}
-    res.status(401).send(msg);
+    res.status(401).send({success: false, message: 'Incorrect authentication'});
   }
 }
 

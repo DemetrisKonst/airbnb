@@ -1,4 +1,4 @@
-// MulterError = require('multer').MulterError;
+MulterError = require('multer').MulterError;
 
 class ErrorMid extends Error {
   constructor(statusCode, message) {
@@ -9,10 +9,9 @@ class ErrorMid extends Error {
 }
 
 const handleError = (err, res) => {
-  // if (err instanceof MulterError){
-  //   err = new ErrorHandler(400, err.message);
-  // }else 
-  if(!err.statusCode){
+  if (err instanceof MulterError){
+    err = new ErrorMid(400, err.message);
+  }else if(!err.statusCode){
     console.log(err);
     err = new ErrorMid(500, 'Unhandled Error: ' + err.message);
   }

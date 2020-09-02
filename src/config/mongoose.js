@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const connURL = 'mongodb://127.0.0.1:27017/airbnb';
+const connURL = process.env.DB_CONNECTION_URL;
 
 mongoose.connect(connURL, {
   useNewUrlParser: true,

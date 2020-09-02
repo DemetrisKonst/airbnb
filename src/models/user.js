@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const ErrorMid = require('../middleware/error.js').ErrorMid;
 
 const Photo = require('./photo.js');
+const Place = require('./place.js');
 
 const userSchema = new mongoose.Schema({
   userName: {
@@ -38,7 +39,6 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
-    minlength: 7,
     trim: true,
     validate(value) {
         if (value.toLowerCase().includes('password')) {
@@ -68,7 +68,6 @@ const userSchema = new mongoose.Schema({
   approvedByAdmin: {
     type: Boolean,
   }
-  
 });
 
 userSchema.statics.findByCredentials = async function (email, password) {
@@ -87,15 +86,24 @@ userSchema.statics.findByCredentials = async function (email, password) {
   return user;
 };
 
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   const user = this;
   
   if (user.isModified('password')) {
     user.password = await bcrypt.hash(user.password, 8);
   }
-
-  next();
 });
+
+userSchema.pre('remove', async function () {
+  const userPlaces = await Place.find({owner: this._id});
+  console.log(userPlaces);
+
+  for (const place of userPlaces) {
+    await place.remove();
+  }
+
+  await Photo.findByIdAndDelete(this.avatar);
+})
 
 const handleDup = function(error, res, next) {
   if (error.name === 'MongoError' && error.code === 11000) {
@@ -110,6 +118,7 @@ userSchema.post('update', handleDup);
 userSchema.post('findOneAndUpdate', handleDup);
 userSchema.post('insertMany', handleDup);
 
+// TODO
 userSchema.methods.view = async function () {
   return {
     _id: this._id,

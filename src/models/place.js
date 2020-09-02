@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const validator = require('validator');
 
 const ErrorMid = require('../middleware/error.js').ErrorMid;
 
+const Photo = require('./photo.js');
 const Booking = require('./booking.js');
 const Review = require('./review.js');
 
@@ -30,6 +30,7 @@ const placeSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: ['Private Room', 'Shared Room', 'Entire Place'],
+    trim: true
   },
   bedAmount: {
     type: Number,
@@ -118,6 +119,35 @@ const placeSchema = new mongoose.Schema({
   }]
 });
 
+placeSchema.pre('remove', async function () {
+  if (this.photos){
+    if (this.photos.main)
+      await Photo.findByIdAndDelete(this.photos.main);
+
+    if (this.photos.secondary){
+      for (const secondaryPhoto_id of this.photos.secondary) {
+        await Photo.findByIdAndDelete(secondaryPhoto_id);
+      }
+    }
+  }
+  
+  if (this.reviews){
+    if (this.reviews.review_ids){
+      for (const review_id of this.reviews.review_ids){
+        await Review.findByIdAndDelete(review_id);
+      }
+    }
+  }
+
+  if (this.bookings){
+    for (const booking_id of this.bookings){
+      await Booking.findByIdAndDelete(booking_id);
+    }
+  }
+
+  console.log('cascaded');
+});
+
 placeSchema.methods.isBooked = async function (fromDate, untilDate) {
   for (const booking_id of this.bookings) {
     const booking = await Booking.findById(booking_id);
@@ -170,7 +200,6 @@ placeSchema.methods.calculateReviews = async function () {
   this.reviews.average = amount === 0 ? 0 : sum / amount;
 }
 
-// placeSchema.methods.deleteReview = async function (reviewId)
 
 const Place = mongoose.model('Place', placeSchema);
 

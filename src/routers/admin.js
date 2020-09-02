@@ -5,6 +5,9 @@ const {auth, generateToken} = require('../middleware/auth.js');
 const ErrorMid = require('../middleware/error.js').ErrorMid;
 
 const User = require('../models/user.js');
+const Place = require('../models/place.js');
+const Review = require('../models/review.js');
+const Booking = require('../models/booking.js');
 
 const router = express.Router();
 
@@ -84,7 +87,40 @@ router.patch('/admin/user/block/:id', auth, async (req, res, next) => {
 });
 
 router.get('/admin/database', auth, async (req, res, next) => {
-  // TODO
+  try{
+    if (req.user.role !== "Admin")
+      throw new ErrorMid(403, 'Admin permissions required');
+
+    if (!req.query.format)
+      throw new ErrorMid(422, 'Format of export is required (json or xml)');
+
+    if (req.query.format !== 'json' && req.query.format !== 'xml')
+      throw new ErrorMid(422, 'Format can only be json or xml');
+
+    const users = await User.find({role: {$ne: 'Admin'}}, '-password -__v');
+    const places = await Place.find({}, '-__v -photos')
+      .populate('owner', '_id userName firstName lastName')
+      .populate({
+        path: 'bookings',
+        select: '-place -__v',
+        populate: {
+          path: 'tenant',
+          select: '_id userName firstName lastName'
+        }
+      })
+      .populate({
+        path: 'reviews.review_ids',
+        select: '-place -__v',
+        populate: {
+          path: 'user',
+          select: '_id userName firstName lastName'
+        }
+      });
+
+    res.status(200).send({success: true, data: {users, places}});
+  }catch (error){
+    next(error);
+  }
 });
 
 module.exports = router;

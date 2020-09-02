@@ -1,6 +1,4 @@
-const mongoose = require('mongoose')
-
-const ErrorMid = require('../middleware/error.js').ErrorMid
+const mongoose = require('mongoose');
 
 const reviewSchema = mongoose.Schema({
   user: {
@@ -21,8 +19,8 @@ const reviewSchema = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Place"
   }
-})
+});
 
-const Review = mongoose.model('Review', reviewSchema)
+const Review = mongoose.model('Review', reviewSchema);
 
-module.exports = Review
+module.exports = Review;

@@ -94,7 +94,13 @@ router.get('/places', async (req, res, next) => {
       }
     };
 
-    const amountOfDays = Math.floor((Date.parse(req.query.until) - Date.parse(req.query.from)) / 24*60*60*1000);
+    const fromDate = new Date(req.query.from);
+    delete req.query.from;
+    
+    const untilDate = new Date(req.query.until);
+    delete req.query.until;
+    
+    const amountOfDays = Math.floor((untilDate - fromDate) / (24*60*60*1000));
 
     if (!amountOfDays)
       throw new ErrorMid(400, 'Wrong date format');
@@ -102,137 +108,148 @@ router.get('/places', async (req, res, next) => {
     if (amountOfDays <= 0)
       throw new ErrorMid(400, 'From date must be after until date');
 
+    // MIN-MAX COST (converted into costPerDay)
     if (req.query.minCost || req.query.maxCost){
-      let cpdF;
+      let cpdF = {};
 
       if (req.query.minCost){
         const minCPD = parseInt(req.query.minCost) / amountOfDays;
-        cpdF.$gt = minCPD;
+        cpdF.$gte = minCPD;
         delete req.query.minCost;
       }
 
       if (req.query.maxCost){
         const maxCPD = parseInt(req.query.maxCost) / amountOfDays;
-        cpdF.$lt = maxCPD;
+        cpdF.$lte = maxCPD;
         delete req.query.maxCost;
       }
       
       filterObject.costPerDay = cpdF;
     }
 
+    // MIN-MAX AREA
     if (req.query.minArea || req.query.maxArea){
-      let areaF;
+      let areaF = {};
 
       if (req.query.minArea){
-        areaF.$gt = parseInt(req.query.minArea);
+        areaF.$gte = parseInt(req.query.minArea);
         delete req.query.minArea;
       }
       
       if (req.query.maxArea){
-        areaF.$lt = parseInt(req.query.maxArea);
+        areaF.$lte = parseInt(req.query.maxArea);
         delete req.query.maxArea;
       }
 
       filterObject.area = areaF;
     }
 
+    // MINIMUM REVIEW AVERAGE
     if (req.query.minReviewAverage){
       if (req.query.minReviewAverage < 0 || req.query.minReviewAverage > 5)
         throw new ErrorMid(422, 'Review ratings range between 0 and 5');
 
-      filterObject.reviews.average = {$gt: parseInt(req.query.minReviewAverage)};
+      filterObject['$or'] = [
+          {'review.average': {$gte: parseInt(req.query.minReviewAverage)}},
+          {'review.average': {$exists: false}},
+          {'review.average': {$eq: 0}}
+      ];
+      console.log(filterObject['$or']);
       delete req.query.minReviewAverage;
     }
 
+    // TYPE
     if (req.query.type){
       filterObject.type = req.query.type;
       delete req.query.type;
     }
 
-    if (req.query.bedrooms || req.query.bathrooms){
-      let roomsF;
-      
-      if (req.query.bedrooms){
-        roomsF.bedrooms = parseInt(req.query.bedrooms);
-        delete req.query.bedrooms;
-      }
-
-      if (req.query.bathrooms){
-        roomsF.bathrooms = parseInt(req.query.bathrooms);
-        delete req.query.bathrooms;
-      }
-
-      filterObject.rooms = roomsF;
+    // ROOMS
+    if (req.query.bedrooms){
+      filterObject['rooms.bedrooms'] = parseInt(req.query.bedrooms);
+      delete req.query.bedrooms;
     }
 
-    if (req.query.wifi||req.query.airConditioning||req.query.heating||req.query.kitchen||req.query.television||req.query.parking||req.query.elevator||req.query.sittingPlace){
-      let amenF;
-
-      if (req.query.wifi){
-        amenF.wifi = req.query.wifi;
-        delete req.query.wifi;
-      }
-      if (req.query.airConditioning){
-        amenF.airConditioning = req.query.airConditioning;
-        delete req.query.airConditioning;
-      }
-      if (req.query.heating){
-        amenF.heating = req.query.heating;
-        delete req.query.heating;
-      }
-      if (req.query.kitchen){
-        amenF.kitchen = req.query.kitchen;
-        delete req.query.kitchen;
-      }
-      if (req.query.television){
-        amenF.television = req.query.television;
-        delete req.query.television;
-      }
-      if (req.query.parking){
-        amenF.parking = req.query.parking;
-        delete req.query.parking;
-      }
-      if (req.query.elevator){
-        amenF.elevator = req.query.elevator;
-        delete req.query.elevator;
-      }
-      if (req.query.sittingPlace){
-        amenF.sittingPlace = req.query.sittingPlace;
-        delete req.query.sittingPlace;
-      }
-
-      filterObject.amenities = amenF;
+    if (req.query.bathrooms){
+      filterObject['rooms.bathrooms'] = parseInt(req.query.bathrooms);
+      delete req.query.bathrooms;
     }
 
-    if (req.query.smoking || req.query.pets || req.query.events){
-      let rulesF;
-
-      if (req.query.smoking){
-        rulesF.smoking = req.query.smoking;
-        delete req.query.smoking;
-      }
-      if (req.query.pets){
-        rulesF.pets = req.query.pets;
-        delete req.query.pets;
-      }
-      if (req.query.events){
-        rulesF.events = req.query.events;
-        delete req.query.events;
-      }
-
-      filterObject.rules = rulesF;
+    // AMENITIES
+    if (req.query.wifi){
+      filterObject['amenities.wifi'] = req.query.wifi;
+      delete req.query.wifi;
+    }
+    if (req.query.airConditioning){
+      filterObject['amenities.airConditioning'] = req.query.airConditioning;
+      delete req.query.airConditioning;
+    }
+    if (req.query.heating){
+      filterObject['amenities.heating'] = req.query.heating;
+      delete req.query.heating;
+    }
+    if (req.query.kitchen){
+      filterObject['amenities.kitchen'] = req.query.kitchen;
+      delete req.query.kitchen;
+    }
+    if (req.query.television){
+      filterObject['amenities.television'] = req.query.television;
+      delete req.query.television;
+    }
+    if (req.query.parking){
+      filterObject['amenities.parking'] = req.query.parking;
+      delete req.query.parking;
+    }
+    if (req.query.elevator){
+      filterObject['amenities.elevator'] = req.query.elevator;
+      delete req.query.elevator;
+    }
+    if (req.query.sittingPlace){
+      filterObject['amenities.sittingPlace'] = req.query.sittingPlace;
+      delete req.query.sittingPlace;
     }
 
-    // console.log(filterObject);
+    // RULES
+    if (req.query.smoking){
+      filterObject['rules.smoking'] = req.query.smoking;
+      delete req.query.smoking;
+    }
+    if (req.query.pets){
+      filterObject['rules.pets'] = req.query.pets;
+      delete req.query.pets;
+    }
+    if (req.query.events){
+      filterObject['rules.events'] = req.query.events;
+      delete req.query.events;
+    }
 
-    const places = await Place.find(filterObject, '-photos', {
-      limit,
-      skip,
-      sort
-    });
+    const places = await Place.find(filterObject,
+      '-photos.secondary -reviews.review_ids -maxPersons -__v', 
+      {
+        limit,
+        skip,
+        sort
+      })
+      .populate('owner',
+        'firstName lastName'
+      );
 
-    res.status(200).send(places);
+    let availablePlaces = [];
 
+    for (const place of places) {
+      if (!await place.isBooked(fromDate, untilDate)){
+        const jsPlace = place.toObject();
+
+        jsPlace.cost = jsPlace.costPerDay*amountOfDays;
+        delete jsPlace.costPerDay;
+
+        delete jsPlace.bookings;
+
+        availablePlaces.push(jsPlace);
+      }
+    }
+
+    res.status(200).send({success: true, places: availablePlaces});
   }catch (error){
     next(error);
   }
@@ -241,7 +258,8 @@ router.get('/places', async (req, res, next) => {
 router.get('/place/:id', async (req, res, next) => {
   try{
     const place = await Place.findById(req.params.id)
-      .populate('owner', 'firstName lastName')
+      .populate('owner',
+        '_id firstName lastName email tel')
       .populate({
         path: 'reviews', 
         select: 'user text rating',
@@ -315,6 +333,9 @@ router.post('/tenant/place/:id/book', auth, async (req, res, next) => {
       throw new ErrorMid(403, 'User is not a tenant');
 
     const place = await Place.findById(req.params.id);
+
+    if (!place)
+      throw new ErrorMid(404, 'Place does not exist');
 
     await place.isBookingValid(req.body.persons, req.body.from, req.body.until);
 
