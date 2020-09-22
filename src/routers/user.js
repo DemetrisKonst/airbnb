@@ -60,9 +60,7 @@ router.patch('/user/me', auth, async (req, res, next) => {
     }
 
     userUpdates.forEach((update) => req.user[update] = req.body[update]);
-    await req.user.save((err) => {
-      if (err) throw new ErrorMid(500, "Unexpected Server Error: " + err);
-    });
+    await req.user.save();
     res.status(200).send(await req.user.view());
   }catch (error){
     next(error);
