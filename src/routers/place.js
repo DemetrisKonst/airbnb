@@ -298,12 +298,13 @@ router.get('/place/:id/photos/main', async (req, res, next) => {
       throw new ErrorMid(404, 'Place does not exist');
     }
 
+    let buffer;
     if (!place.photos || !place.photos.main) {
       const photo = await Photo.find({default: true});
-      const buffer = photo.binary;
+      buffer = photo.binary;
     }else{
       const photo = await Photo.findById(place.photos.main);
-      const buffer = photo.binary;
+      buffer = photo.binary;
     }
 
     res.set('Content-Type', 'image/png');
