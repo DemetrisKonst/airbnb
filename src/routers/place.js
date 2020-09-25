@@ -300,7 +300,7 @@ router.get('/place/:id/photos/main', async (req, res, next) => {
 
     let buffer;
     if (!place.photos || !place.photos.main) {
-      const photo = await Photo.find({default: true});
+      const photo = await Photo.findOne({default: true});
       buffer = photo.binary;
     }else{
       const photo = await Photo.findById(place.photos.main);
