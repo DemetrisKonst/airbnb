@@ -90,8 +90,6 @@ router.get('/places', async (req, res, next) => {
 
     const locationData = await geocode(req.query.location);
     const [longitude, latitude] = locationData.features[0].geometry.coordinates;
-    console.log(latitude);
-    console.log(longitude);
 
     let filterObject = {
       'location.geoJSON': {
@@ -103,7 +101,6 @@ router.get('/places', async (req, res, next) => {
           $maxDistance: 5000
         }
       },
-      // 'location.neighbourhood': req.query.location,
       maxPersons: {
         $gte: parseInt(req.query.persons)
       }
@@ -238,8 +235,6 @@ router.get('/places', async (req, res, next) => {
       delete req.query.events;
     }
 
-    console.log(filterObject);
-
     const places = await Place.find(filterObject,
       '-photos.secondary -reviews.review_ids -maxPersons -__v', 
       {
@@ -278,7 +273,7 @@ router.get('/place/:id', async (req, res, next) => {
       .populate('owner',
         '_id firstName lastName email tel')
       .populate({
-        path: 'reviews', 
+        path: 'reviews.review_ids', 
         select: 'user text rating',
         populate: {
           path: 'user',
@@ -304,11 +299,12 @@ router.get('/place/:id/photos/main', async (req, res, next) => {
     }
 
     if (!place.photos || !place.photos.main) {
-      throw new ErrorMid(404, 'Place does not have a main photo');
+      const photo = await Photo.find({default: true});
+      const buffer = photo.binary;
+    }else{
+      const photo = await Photo.findById(place.photos.main);
+      const buffer = photo.binary;
     }
-
-    const photo = await Photo.findById(place.photos.main);
-    const buffer = photo.binary;
 
     res.set('Content-Type', 'image/png');
     res.send(buffer);
