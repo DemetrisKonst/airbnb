@@ -116,13 +116,13 @@ router.get('/user/:id/avatar', async (req, res, next) => {
     let buffer;
 
     if (!user.avatar) {
-      const photo = await Photo.find({defaultAvatar: true});
+      const photo = await Photo.findOne({defaultAvatar: true});
       buffer = photo.binary
     }else{
       const photo = await Photo.findById(user.avatar);
       buffer = photo.binary;
     }
-    
+
     res.set('Content-Type', 'image/png');
     res.status(200).send(buffer);
   }catch (error){
