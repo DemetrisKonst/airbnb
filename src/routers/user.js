@@ -113,13 +113,16 @@ router.get('/user/:id/avatar', async (req, res, next) => {
       throw new ErrorMid(404, 'User does not exist');
     }
 
+    let buffer;
+
     if (!user.avatar) {
-      throw new ErrorMid(404, 'User does not have an avatar');
+      const photo = await Photo.find({defaultAvatar: true});
+      buffer = photo.binary
+    }else{
+      const photo = await Photo.findById(user.avatar);
+      buffer = photo.binary;
     }
-
-    const photo = await Photo.findById(user.avatar);
-    const buffer = photo.binary;
-
+    
     res.set('Content-Type', 'image/png');
     res.status(200).send(buffer);
   }catch (error){
