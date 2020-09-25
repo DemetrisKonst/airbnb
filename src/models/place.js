@@ -84,8 +84,17 @@ const placeSchema = new mongoose.Schema({
     events: Boolean,
   },
   location: {
-    longitude: Number,
-    latitude: Number,
+    geoJSON: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        required: true
+      },
+      coordinates: {
+        type: [Number],
+        required: true
+      }
+    },
     address: {
       type: String,
       trim: true,
@@ -118,6 +127,8 @@ const placeSchema = new mongoose.Schema({
     ref: "Booking"
   }]
 });
+
+placeSchema.index({'location.geoJSON': '2dsphere'})
 
 placeSchema.pre('remove', async function () {
   if (this.photos){

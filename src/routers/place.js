@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const multer = require('multer');
 const sharp = require('sharp');
 
+const geocode = require('../utils/geocode.js');
 const {auth, generateToken} = require('../middleware/auth.js');
 const ErrorMid = require('../middleware/error.js').ErrorMid;
 const Place = require('../models/place.js');
@@ -87,8 +88,22 @@ router.get('/places', async (req, res, next) => {
         throw new ErrorMid(422, `Cannot filter by ${qFilter}`);
     }
 
+    const locationData = await geocode(req.query.location);
+    const [longitude, latitude] = locationData.features[0].geometry.coordinates;
+    console.log(latitude);
+    console.log(longitude);
+
     let filterObject = {
-      'location.neighbourhood': req.query.location,
+      'location.geoJSON': {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [latitude, longitude]
+          },
+          $maxDistance: 5000
+        }
+      },
+      // 'location.neighbourhood': req.query.location,
       maxPersons: {
         $gte: parseInt(req.query.persons)
       }
@@ -222,6 +237,8 @@ router.get('/places', async (req, res, next) => {
       filterObject['rules.events'] = req.query.events;
       delete req.query.events;
     }
+
+    console.log(filterObject);
 
     const places = await Place.find(filterObject,
       '-photos.secondary -reviews.review_ids -maxPersons -__v', 

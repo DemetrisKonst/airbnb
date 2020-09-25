@@ -259,6 +259,7 @@ router.post('/host/me/place', auth, async (req, res, next) => {
       throw new ErrorMid(403, 'Host is not approved by admin');
 
     req.body.owner = req.user._id;
+    req.body.location.geoJSON.type = 'Point';
     const place = new Place(req.body);
     await place.save();
 
